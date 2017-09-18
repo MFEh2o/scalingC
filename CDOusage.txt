@@ -1,0 +1,1 @@
+cdo -f nc copy myfile.grb myfile.nc
