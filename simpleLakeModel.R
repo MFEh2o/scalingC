@@ -7,6 +7,39 @@ rm(list=ls())
 library(deSolve)
 
 # define the model
+
+#state variables
+# C - terrestrial dissolved organic carbon [g C]
+# A - phytoplankton phosphorus [g P]
+# P - pelagic bioavailable phosphorus [g P]
+# S - sediment bioavailable phosphorus [g P]
+
+# parameters
+#kbg - contribution of water to light attenuation coefficient [?]; -0.05 this needs to be checked with Patrick
+#kc - DOC contribution to light attenuation coefficient [?]; 0.00000042
+#ka - phytoplankton contribution to light attenuation coefficient [?]; 0.000015
+#I0 - incoming light [uE]; 300
+#Cprecip - concentration of DOC in precipitation [g C m-3]; 1
+#Pprecip - concentration of phosphorus in precipitation [g P m-3]; 0.005
+#d - decay rate of DOC [day-1]; 0.01
+#pa - max growth rate of phytoplankton [day-1]; 1
+#ha - half saturation constant for light for phytoplankton [uE]; 100
+#ma - half saturation constant for bioavailable phosphorus [g P m-3]; 0.003
+#la - phytoplankton mortality rate [day-1]; 0.1
+#r - settling rate of phytoplankton [m day-1]; 0.1
+#ap - sediment phosphorus release rate [m day-1]; 0.05
+#b - rate of permenant burial of sediment phosphorus [day-1]; 0.001
+
+#Al - lake area [m2]; 1e4
+#Ac - catchment area [m2]; 1e6
+#zmax - lake max and mean depth (assuming cylindrical lake) [m]; 2
+#zsed - depth of the active layer of sediments [m]; 0.01
+#Cin - concentration of DOC in stream [g C m-3]; 10
+#Pin - concentration of phospohrus in stream [g P m-3]; 0.040
+#map - mean annual precipitation for the lake catchment [m yr-1]; 0.8
+#ec - evapotranspiration rate of the lake catchment [m day-1]; 0.0014
+#el - evaporation rate from the lake; [m day-1]; 0.0025
+
 tstep=function(t, y, parms) {
   with(as.list(c(y,parms)),{
   
