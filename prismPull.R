@@ -27,6 +27,6 @@ for(i in 1:ncol(annualPPT)){
 }
 
 MAP=cbind(lakes$SITE_ID,colMeans(annualPPT),apply(annualPPT,2,function(x) sd(x)/mean(x)))
-colnames(MAP)=c("SITE_ID","MAP_cm","MAP_CV")
+colnames(MAP)=c("SITE_ID","MAP_mm","MAP_CV")
 
 #write.table(MAP,"NLA2007_prism2000s_MAP.txt",row.names=FALSE,sep="\t")
