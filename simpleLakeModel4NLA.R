@@ -100,8 +100,8 @@ cor(PRISM$MAP_mm[!is.na(NLDASprecip$dailyNLDASprecip_mm)],NLDASprecip$dailyNLDAS
 toSim=cbind(toSim,NLDASprecip$dailyNLDASprecip_mm,cidaET$MAET_mm/365,NLDASevap$dailyNLDASevap_mm)
 colnames(toSim)[9:11]=c('dailyNLDASprecip_mm','dailyCIDAet_mm','dailyNLDASevap_mm')
 
-# remove the lake with NA for precip and evap --> FIX THIS IN NLDAS PULL!!!
-toSim=toSim[-is.na(toSim$dailyNLDASprecip_mm),]
+# remove the lake with NA for precip, evap, and ET (N=5) --> FIX THIS IN NLDAS and cida PULLs!!!
+toSim=toSim[!is.na(rowSums(toSim[,9:11])),]
 
 
 ###### simulate for EPA NLA 2007 lakes
@@ -124,5 +124,41 @@ for(i in 1:nrow(NLA2007_modelEquil)){
   NLA2007_modelEquil[i,]=run[nrow(run),2:ncol(run)]
 }
 
-# Getting DLSODA warnings for a number of lakes - check for hydrology budget working out for lakes...
+colnames(NLA2007_modelEquil)=c('C','A','P','S')
 
+# Getting DLSODA warnings for a number of lakes - check for hydrology budget working out for lakes...
+sum(!is.finite(rowSums(NLA2007_modelEquil)))
+solverErrors=which(!is.finite(rowSums(NLA2007_modelEquil)))
+
+Qin=toSim$BASINAREA_KM2*1e6*(toSim$dailyNLDASprecip_mm-toSim$dailyCIDAet_mm)/1000  #m3 day-1
+Qprecip=toSim$LAKEAREA_KM2*1e6*toSim$dailyNLDASprecip_mm/1000  #m3 day-1
+Qevap=toSim$LAKEAREA_KM2*1e6*toSim$dailyNLDASevap_mm/1000  #m3 day-1
+Qout=Qin+Qprecip-Qevap #m3 day-1 --> 129 lakes have negative Qout
+
+arealRunoff=toSim$dailyNLDASprecip_mm-toSim$dailyCIDAet_mm
+hist(arealRunoff)
+hist(arealRunoff,breaks=seq(-4,6.5,0.1),xlim=c(-4,0))
+
+arealRunoffSYMBOL=rep(22,length(arealRunoff))
+arealRunoffSYMBOL[arealRunoff<0]=15
+arealRunoffSIZE=rep(0.3,length(arealRunoff))
+arealRunoffSIZE[arealRunoff<0]=0.75
+arealRunoffCOLOR=rep('black',length(arealRunoff))
+arealRunoffCOLOR[arealRunoff<0]='red'
+
+library(fields)
+plot(toSim$LON_DD,toSim$LAT_DD,cex=arealRunoffSIZE,pch=arealRunoffSYMBOL,col=arealRunoffCOLOR)
+US(add=TRUE)
+
+
+RT=(toSim$LAKEAREA_KM2*1e6*toSim$DEPTHMAX_m/5)/Qout  # day
+
+sum(Qout<0)
+
+# visualize summary data
+approxZbar=toSim[,6]/5  # approximate lake mean depth [m]
+approxV=toSim[,7]*1e6*approxZbar  # approximate lake volume [m3]
+NLA2007_DR=toSim[,8]/toSim[,7]  # drainage ratio for lakes
+
+plot(NLA2007_DR,NLA2007_modelEquil[,1]/approxV,ylim=c(0,10),log="x")
+plot(NLA2007_DR,NLA2007_modelEquil[,2]/approxV,log="x")
