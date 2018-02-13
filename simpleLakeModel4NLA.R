@@ -47,6 +47,7 @@ tstep=function(t, y, parms) {
     Vsed=Al*zsed  # volume of active lake sediments [m3]
     precip=map/365  # daily precipitation [m d-1]
     Qin=(precip - ec)*Ac  # watershed hydrologic input [m3 d-1]
+    if(Qin<0){Qin=0}
     Qprecip=precip*Al  # water input from direct precipitation [m3 d-1]
     Qout=Qin + (precip-el)*Al  # outflow through lake outlet [m3 d-1]
     Qevap=el*Al  # water loss via evaporation [m3 d-1]
@@ -126,7 +127,9 @@ for(i in 1:nrow(NLA2007_modelEquil)){
 
 colnames(NLA2007_modelEquil)=c('C','A','P','S')
 
-# Getting DLSODA warnings for a number of lakes - check for hydrology budget working out for lakes...
+#********
+## Getting DLSODA warnings for a number of lakes - check for hydrology budget working out for lakes...
+#********
 sum(!is.finite(rowSums(NLA2007_modelEquil)))
 solverErrors=which(!is.finite(rowSums(NLA2007_modelEquil)))
 
@@ -139,6 +142,7 @@ arealRunoff=toSim$dailyNLDASprecip_mm-toSim$dailyCIDAet_mm
 hist(arealRunoff)
 hist(arealRunoff,breaks=seq(-4,6.5,0.1),xlim=c(-4,0))
 
+# where are the failed lakes? --> mostly in the west
 arealRunoffSYMBOL=rep(22,length(arealRunoff))
 arealRunoffSYMBOL[arealRunoff<0]=15
 arealRunoffSIZE=rep(0.3,length(arealRunoff))
@@ -155,10 +159,61 @@ RT=(toSim$LAKEAREA_KM2*1e6*toSim$DEPTHMAX_m/5)/Qout  # day
 
 sum(Qout<0)
 
+NLA2007_DR=toSim[,8]/toSim[,7]  # drainage ratio for lakes
+
+# what drainage ratios do failed lakes have? --> all over the place
+plot(log10(NLA2007_DR),cex=arealRunoffSIZE,pch=arealRunoffSYMBOL,col=arealRunoffCOLOR)
+
+
+# look at forcing data
+hist(arealRunoff)
+sum(arealRunoff<0)
+
+netPrecip=toSim$dailyNLDASprecip_mm-toSim$dailyNLDASevap_mm
+hist(netPrecip)
+sum(netPrecip<0)
+
+sum((arealRunoff>0) & (netPrecip>0))  # 982
+sum((arealRunoff<0) & (netPrecip>0))  # 109
+sum((arealRunoff>0) & (netPrecip<0))  # 35
+sum((arealRunoff<0) & (netPrecip<0))  # 26
+
+#does arealRunoff account for net Precip in N=35? --> yes
+sub=toSim[((arealRunoff>0) & (netPrecip<0)),]
+subAR=arealRunoff[((arealRunoff>0) & (netPrecip<0))]
+subNP=netPrecip[((arealRunoff>0) & (netPrecip<0))]
+sum((sub$BASINAREA_KM2*1e6*subAR/1000-sub$LAKEAREA_KM2*1e6*subNP/1000)<0)
+
+#*********
+# IF WE SET arealRunoff<0 to 0, WE WILL ONLY HAVE 26 PROBLEM
+# LAKES, but 35 more will not have watershed inputs...
+#*********
+
+# Where are these 26 lakes? --> Southwest...
+probSYMBOL=rep(22,length(arealRunoff))
+probSYMBOL[((arealRunoff<0) & (netPrecip<0))]=15
+probSIZE=rep(0.3,length(arealRunoff))
+probSIZE[((arealRunoff<0) & (netPrecip<0))]=0.75
+probCOLOR=rep('black',length(arealRunoff))
+probCOLOR[((arealRunoff<0) & (netPrecip<0))]='red'
+
+plot(toSim$LON_DD,toSim$LAT_DD,cex=probSIZE,pch=probSYMBOL,col=probCOLOR)
+US(add=TRUE)
+
+# how far off are the 26 lakes?
+sub=toSim[((arealRunoff<0) & (netPrecip<0)),]
+subAR=arealRunoff[((arealRunoff<0) & (netPrecip<0))]
+subNP=netPrecip[((arealRunoff<0) & (netPrecip<0))]
+
+hist(subAR)
+hist(subNP)
+
+
 # visualize summary data
 approxZbar=toSim[,6]/5  # approximate lake mean depth [m]
 approxV=toSim[,7]*1e6*approxZbar  # approximate lake volume [m3]
-NLA2007_DR=toSim[,8]/toSim[,7]  # drainage ratio for lakes
 
 plot(NLA2007_DR,NLA2007_modelEquil[,1]/approxV,ylim=c(0,10),log="x")
 plot(NLA2007_DR,NLA2007_modelEquil[,2]/approxV,log="x")
+
+
