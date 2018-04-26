@@ -47,9 +47,10 @@ tstep=function(t, y, parms) {
     Vsed=Al*zsed  # volume of active lake sediments [m3]
     precip=map/365  # daily precipitation [m d-1]
     Qin=(precip - ec)*Ac  # watershed hydrologic input [m3 d-1]
-    if(Qin<0){Qin=0}
+    if(Qin<0){Qin=0}  
     Qprecip=precip*Al  # water input from direct precipitation [m3 d-1]
     Qout=Qin + (precip-el)*Al  # outflow through lake outlet [m3 d-1]
+    if(Qout<0){Qout=0}
     Qevap=el*Al  # water loss via evaporation [m3 d-1]
     
     kd=kbg + (kc*C) + (ka*A)  # light attenuation coefficient of lake water [m-1] 
@@ -130,10 +131,16 @@ colnames(NLA2007_modelEquil)=c('C','A','P','S')
 #********
 ## Getting DLSODA warnings for a number of lakes - check for hydrology budget working out for lakes...
 #********
+
+# much of this was fixed with forcing Qin to 0 if calculated to be negative
+# many of lakes with Qin=0 are ok because net precip is positive
+# really only ~25 lakes that have Qin=0 and a net precip that is negative and all are in ~southwest
+
 sum(!is.finite(rowSums(NLA2007_modelEquil)))
 solverErrors=which(!is.finite(rowSums(NLA2007_modelEquil)))
 
 Qin=toSim$BASINAREA_KM2*1e6*(toSim$dailyNLDASprecip_mm-toSim$dailyCIDAet_mm)/1000  #m3 day-1
+Qin[Qin<0]=0
 Qprecip=toSim$LAKEAREA_KM2*1e6*toSim$dailyNLDASprecip_mm/1000  #m3 day-1
 Qevap=toSim$LAKEAREA_KM2*1e6*toSim$dailyNLDASevap_mm/1000  #m3 day-1
 Qout=Qin+Qprecip-Qevap #m3 day-1 --> 129 lakes have negative Qout
@@ -200,7 +207,11 @@ probCOLOR[((arealRunoff<0) & (netPrecip<0))]='red'
 plot(toSim$LON_DD,toSim$LAT_DD,cex=probSIZE,pch=probSYMBOL,col=probCOLOR)
 US(add=TRUE)
 
-# how far off are the 26 lakes?
+# how far off are the 26 lakes? 
+# --> these could be slowly losing water over time frame we averaged climatic data
+# --> the problem is that we run it to equilibrium...
+# --> COULD RUN THE MODEL OVER ACTUAL CLIMATIC TIME SERIES, BUT THIS GETS COMPLICATED WITH SEASONS...
+
 sub=toSim[((arealRunoff<0) & (netPrecip<0)),]
 subAR=arealRunoff[((arealRunoff<0) & (netPrecip<0))]
 subNP=netPrecip[((arealRunoff<0) & (netPrecip<0))]
