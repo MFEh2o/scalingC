@@ -216,8 +216,8 @@ sub=toSim[((arealRunoff<0) & (netPrecip<0)),]
 subAR=arealRunoff[((arealRunoff<0) & (netPrecip<0))]
 subNP=netPrecip[((arealRunoff<0) & (netPrecip<0))]
 
-hist(subAR)
-hist(subNP)
+hist(subAR,xlab="areal watershed runoff (mm day-1)")
+hist(subNP,xlab="net precipitation (mm day-1)")
 
 
 # visualize summary data
