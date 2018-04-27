@@ -166,22 +166,68 @@ setwd("..")
 
 #nldas land versus water
 nldasLvW=read.table("NLDASmask_UMDunified.asc",header=FALSE,stringsAsFactors=FALSE)
-colnames(nldasLvw)=c("colNum",'rowNum','lat','long','waterVland')
+colnames(nldasLvW)=c("colNum",'rowNum','lat','long','waterVland')
 # column 1: grid column number
 # column 2: grid row number
 # column 3: Latitude (center of 1/8th-degree grid boxes)
 # column 4: Longitude (center of 1/8th-degree grid boxes)
 # column 5: Mask Value (0=water, 1=land)
 
-nldasCONUS=read.table("NLDASmask_CONUS.asc",header=FALSE,stringsAsFactors=FALSE)
-colnames(nldasCONUS)=c("colNum",'rowNum','lat','long','CONUS')
+#nldasCONUS=read.table("NLDASmask_CONUS.asc",header=FALSE,stringsAsFactors=FALSE)
+#colnames(nldasCONUS)=c("colNum",'rowNum','lat','long','CONUS')
 # column 1: grid column number
 # column 2: grid row number
 # column 3: Latitude (center of 1/8th-degree grid boxes)
 # column 4: Longitude (center of 1/8th-degree grid boxes)
 # column 5: Mask Value (0=outside of CONUS, 1=CONUS)
+
+# load NHDplus lake coordinates
+NHDlakes=read.csv("NHDplusWaterbody_LatLong.csv",header=TRUE,stringsAsFactors = FALSE)
+
+NHDevap=data.frame(COMID=NHDlakes$COMID,AREASQKM=NHDlakes$AREASQKM,FTYPE=NHDlakes$FTYPE,FCODE=NHDlakes$FCODE,EVAP=NA)
+
+meanEvap_NLDASform=meanEvap[nrow(meanEvap):1,1:ncol(meanEvap)]
+
+findEvap<-function(pt){
+  grid=which(((abs(nldasLvW$lat-pt[2])==min(abs(nldasLvW$lat-pt[2]))) & (abs(nldasLvW$long-pt[1])==min(abs(nldasLvW$long-pt[1])))))
+  
+  row=nldasLvW$rowNum[grid]
+  col=nldasLvW$colNum[grid]
+  curE=meanEvap_NLDASform[col,row]
+  return(curE)
+}
+
+z=apply(as.matrix(NHDlakes[,2:3]),1,findEvap)
+
+NHDevap$EVAP=z
+sum(is.na(NHDevap$EVAP))   # 23267 with NA
+
+#write.csv(NHDevap,"NHDplusWaterbody_Evaporation.csv",row.names=FALSE)
+#*****
+# Dealing with NA sites
+#*****
+NHDevapNA=NHDevap[is.na(NHDevap$EVAP),]
+NHDlakesNA=NHDlakes[is.na(NHDevap$EVAP),]
+
+plot(NHDlakesNA$long,NHDlakesNA$lat,cex=0.75)
+US(add=TRUE)
+
+filled.contour(seq(-124.9375,-67.0625,by=0.125),seq(25.0625,52.9375,by=0.125),meanEvap,xlim=c(-130,-65),plot.axes={points(NHDlakesNA$long,NHDlakesNA$lat,cex=0.5)})
+# most are "on land" based on filled.contour plot of meanEvap...
+pt=unlist(NHDlakesNA[1,2:3])
+grid=which(((abs(nldasLvW$lat-pt[2])==min(abs(nldasLvW$lat-pt[2]))) & (abs(nldasLvW$long-pt[1])==min(abs(nldasLvW$long-pt[1])))))
+nldasLvW[grid,]
+row=nldasLvW$rowNum[grid]
+col=nldasLvW$colNum[grid]
+curE=meanEvap_NLDASform[col,row]  # get NA, despite being on land...
+# is filled.contour misleading and we're missing data in these spots?
+
+
+
+#*****
 # load list of NLA2007 lakes
-setwd("..")
+#*****
+setwd("NLA2007")
 lakes=read.csv("NLA2007_SampledLakeInformation_20091113.csv",header=TRUE,fill=TRUE,stringsAsFactors=FALSE)
 lakes=lakes[lakes$VISIT_NO==1,]
 
