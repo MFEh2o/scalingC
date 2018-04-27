@@ -150,7 +150,36 @@ filled.contour(1:nrow(sumPrecip),1:ncol(sumPrecip),log10(sumPrecip))
 meanEvap=-1*apply(store_evap,c(1,2),FUN=mean)  #mm day-1
 filled.contour(1:nrow(meanEvap),1:ncol(meanEvap),meanEvap)
 
+#********
+# grid designations and coordinates from nldas
+#********
 
+# the NLDAS domain extends from 25 to 53 North and -125 to -67 West
+# latitude/longitude values represent center of 1/8th degree grid boxes
+# Position      GridColumn   GridRow   Longitude   Latitude
+# Lower left    1            1         -124.9375   25.0625
+# Lower right   464          1         -67.0625    25.0625
+# Upper right   464          224       -67.0625    52.9375
+# Upper left    1            224       -124.9375   52.9375
+
+setwd("..")
+
+#nldas land versus water
+nldasLvW=read.table("NLDASmask_UMDunified.asc",header=FALSE,stringsAsFactors=FALSE)
+colnames(nldasLvw)=c("colNum",'rowNum','lat','long','waterVland')
+# column 1: grid column number
+# column 2: grid row number
+# column 3: Latitude (center of 1/8th-degree grid boxes)
+# column 4: Longitude (center of 1/8th-degree grid boxes)
+# column 5: Mask Value (0=water, 1=land)
+
+nldasCONUS=read.table("NLDASmask_CONUS.asc",header=FALSE,stringsAsFactors=FALSE)
+colnames(nldasCONUS)=c("colNum",'rowNum','lat','long','CONUS')
+# column 1: grid column number
+# column 2: grid row number
+# column 3: Latitude (center of 1/8th-degree grid boxes)
+# column 4: Longitude (center of 1/8th-degree grid boxes)
+# column 5: Mask Value (0=outside of CONUS, 1=CONUS)
 # load list of NLA2007 lakes
 setwd("..")
 lakes=read.csv("NLA2007_SampledLakeInformation_20091113.csv",header=TRUE,fill=TRUE,stringsAsFactors=FALSE)
