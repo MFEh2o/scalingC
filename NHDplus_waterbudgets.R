@@ -57,6 +57,8 @@ NHDplus_waterbudgets$E=evap$EVAPpenman/1000*evap$AREASQKM*1e6             # m3 d
 putativeQout=NHDplus_waterbudgets$Qin+NHDplus_waterbudgets$Pin-NHDplus_waterbudgets$E
 NHDplus_waterbudgets$Qout=ifelse(putativeQout>0,putativeQout,0)           # m3 day-1
 
+#write.csv(NHDplus_waterbudgets,"NHDplus_waterbudgets.csv",row.names=FALSE)
+
 # look at balancing of budgets
 range(NHDplus_waterbudgets$Qin)
 range(NHDplus_waterbudgets$Pin)
