@@ -90,8 +90,6 @@ evap=(slope*rad+r_air*CP_PM*vpd/ra)/(lv*(slope+gamma*(1+(rc+rarc)/ra)))*SEC_PER_
 return(evap)
 }
 
-
-
 # loading netcdf file created from grib file from NLDAS-2 output
 setwd("~/Documents/Research/LTER_EAGER/scalingC/NLDAS_forcing_files/")
 
@@ -150,6 +148,33 @@ filled.contour(1:nrow(sumPrecip),1:ncol(sumPrecip),log10(sumPrecip))
 meanEvap=-1*apply(store_evap,c(1,2),FUN=mean)  #mm day-1
 filled.contour(1:nrow(meanEvap),1:ncol(meanEvap),meanEvap)
 
+# make spatial dataframe with long, lat, and meanEvap numbers
+long=seq(-124.9375,-67.0625,by=0.125)
+lat=seq(25.0625,52.9375,by=0.125)
+meanEvapDF=data.frame(long=rep(long,length(lat)),lat=rep(lat,each=length(long)),meanEvap=as.numeric(meanEvap))
+coordinates(meanEvapDF) <- ~long + lat
+proj4string(meanEvapDF) <- CRS("+init=epsg:4326")
+
+# ****
+# run code in usingDOENREL_evap.R, then run following code
+#*****
+
+meanEvapCONUS=meanEvapDF[!is.na(over(meanEvapDF,usaPoly)),]
+
+
+colRange=colorRamp(c('blue','red'))
+colorsPenman=rgb(colRange(meanEvapCONUS@data[,1]/max(c(meanEvapCONUS@data[,1],evap.krigedCONUS@data[,1])))/255)
+colorsNREL=rgb(colRange(evap.krigedCONUS@data[,1]/max(c(meanEvapCONUS@data[,1],evap.krigedCONUS@data[,1])))/255)
+
+colorsPenman_only=rgb(colRange(meanEvapCONUS@data[,1]/max(meanEvapCONUS@data[,1]))/255)
+colorsNREL_only=rgb(colRange(evap.krigedCONUS@data[,1]/max(evap.krigedCONUS@data[,1]))/255)
+
+
+plot(meanEvapCONUS@coords[,1],meanEvapCONUS@coords[,2],pch=15,col=colorsPenman,xlab="long. (degrees)",ylab="lat. (degrees)")
+plot(evap.krigedCONUS@coords[,1],evap.krigedCONUS@coords[,2],pch=15,col=colorsNREL,xlab="long. (degrees)",ylab="lat. (degrees)")
+plot(meanEvapCONUS@coords[,1],meanEvapCONUS@coords[,2],pch=15,col=colorsPenman_only,xlab="long. (degrees)",ylab="lat. (degrees)")
+plot(evap.krigedCONUS@coords[,1],evap.krigedCONUS@coords[,2],pch=15,col=colorsNREL_only,xlab="long. (degrees)",ylab="lat. (degrees)")
+
 #********
 # grid designations and coordinates from nldas
 #********
@@ -181,51 +206,52 @@ colnames(nldasLvW)=c("colNum",'rowNum','lat','long','waterVland')
 # column 4: Longitude (center of 1/8th-degree grid boxes)
 # column 5: Mask Value (0=outside of CONUS, 1=CONUS)
 
-# load NHDplus lake coordinates
+# load NHDplus lake coordinates to get Evap for all
 NHDlakes=read.csv("NHDplusWaterbody_LatLong.csv",header=TRUE,stringsAsFactors = FALSE)
 
-NHDevap=data.frame(COMID=NHDlakes$COMID,AREASQKM=NHDlakes$AREASQKM,FTYPE=NHDlakes$FTYPE,FCODE=NHDlakes$FCODE,EVAP=NA)
+NHDevap=data.frame(COMID=NHDlakes$COMID,LONG=NHDlakes$long,LAT=NHDlakes$lat,AREASQKM=NHDlakes$AREASQKM,FTYPE=NHDlakes$FTYPE,FCODE=NHDlakes$FCODE,EVAPpenman=NA,EVAPnrel=NA,stringsAsFactors=FALSE)
 
-meanEvap_NLDASform=meanEvap[nrow(meanEvap):1,1:ncol(meanEvap)]
+meanEvap_NLDASform=t(meanEvap)
+meanEvapNREL_NLDASform=t(NRELevapCONUS)
 
-findEvap<-function(pt){
-  grid=which(((abs(nldasLvW$lat-pt[2])==min(abs(nldasLvW$lat-pt[2]))) & (abs(nldasLvW$long-pt[1])==min(abs(nldasLvW$long-pt[1])))))
-  
-  row=nldasLvW$rowNum[grid]
-  col=nldasLvW$colNum[grid]
-  curE=meanEvap_NLDASform[col,row]
-  return(curE)
+# clean up R environment to deal with big matrices
+toRemove=ls()
+toRemove=toRemove[!(toRemove%in%c("meanEvap_NLDASform","meanEvapNREL_NLDASform","nldasLvW","NHDevap"))]
+rm(list=toRemove)
+
+# loop through grids of Evap
+long=seq(-125,-67.125,by=0.125)
+lat=seq(25,52.875,by=0.125)
+lengthLong=length(long)
+lengthLat=length(lat)
+N=lengthLong*lengthLat
+for(a in 1:length(long)){
+  for(b in 1:length(lat)){
+    print(((a-1)*lengthLat+b)/N*100)
+    if((!is.na(meanEvap_NLDASform[b,a]) & (!is.na(meanEvapNREL_NLDASform[b,a])))){
+      minlong=long[a]
+      minlat=lat[b]
+      maxlong=minlong+0.125
+      maxlat=minlat+0.125
+    
+      matchLakes=which(((NHDevap$LONG>=minlong & NHDevap$LONG<maxlong) & (NHDevap$LAT>=minlat & NHDevap$LAT<maxlat)))
+      if(length(matchLakes)>0){
+        NHDevap$EVAPpenman[matchLakes]=meanEvap_NLDASform[b,a]
+        NHDevap$EVAPnrel[matchLakes]=meanEvapNREL_NLDASform[b,a]
+      }
+    }
+  }
 }
 
-z=apply(as.matrix(NHDlakes[,2:3]),1,findEvap)
-
-NHDevap$EVAP=z
-sum(is.na(NHDevap$EVAP))   # 23267 with NA
-
 #write.csv(NHDevap,"NHDplusWaterbody_Evaporation.csv",row.names=FALSE)
-#*****
-# Dealing with NA sites
-#*****
-NHDevapNA=NHDevap[is.na(NHDevap$EVAP),]
-NHDlakesNA=NHDlakes[is.na(NHDevap$EVAP),]
 
-plot(NHDlakesNA$long,NHDlakesNA$lat,cex=0.75)
-US(add=TRUE)
 
-filled.contour(seq(-124.9375,-67.0625,by=0.125),seq(25.0625,52.9375,by=0.125),meanEvap,xlim=c(-130,-65),plot.axes={points(NHDlakesNA$long,NHDlakesNA$lat,cex=0.5)})
-# most are "on land" based on filled.contour plot of meanEvap...
-pt=unlist(NHDlakesNA[1,2:3])
-grid=which(((abs(nldasLvW$lat-pt[2])==min(abs(nldasLvW$lat-pt[2]))) & (abs(nldasLvW$long-pt[1])==min(abs(nldasLvW$long-pt[1])))))
-nldasLvW[grid,]
-row=nldasLvW$rowNum[grid]
-col=nldasLvW$colNum[grid]
-curE=meanEvap_NLDASform[col,row]  # get NA, despite being on land...
-# is filled.contour misleading and we're missing data in these spots?
+
 
 
 
 #*****
-# load list of NLA2007 lakes
+# old code for NLA2007 lakes
 #*****
 setwd("NLA2007")
 lakes=read.csv("NLA2007_SampledLakeInformation_20091113.csv",header=TRUE,fill=TRUE,stringsAsFactors=FALSE)
