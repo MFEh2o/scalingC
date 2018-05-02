@@ -3,7 +3,7 @@
 # found in Cavusoglu et al. (2017) Nature Communications; DOI: 10.1038/s41467-017-00581-w
 rm(list=ls())
 
-setwd("~/Documents/Research/LTER_EAGER/scalingC/")
+setwd("~/Documents/Research/LTER_EAGER/scalingC/DOENRELdata/")
 d=read.csv("dBmTMY3.csv",header=TRUE,stringsAsFactors=FALSE)
 
 # extract site info

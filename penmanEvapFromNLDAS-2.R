@@ -207,6 +207,7 @@ colnames(nldasLvW)=c("colNum",'rowNum','lat','long','waterVland')
 # column 5: Mask Value (0=outside of CONUS, 1=CONUS)
 
 # load NHDplus lake coordinates to get Evap for all
+setwd("NHDplusOutput")
 NHDlakes=read.csv("NHDplusWaterbody_LatLong.csv",header=TRUE,stringsAsFactors = FALSE)
 
 NHDevap=data.frame(COMID=NHDlakes$COMID,LONG=NHDlakes$long,LAT=NHDlakes$lat,AREASQKM=NHDlakes$AREASQKM,FTYPE=NHDlakes$FTYPE,FCODE=NHDlakes$FCODE,EVAPpenman=NA,EVAPnrel=NA,stringsAsFactors=FALSE)
