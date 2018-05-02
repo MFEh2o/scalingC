@@ -22,3 +22,5 @@ peFiles
 NLDAS_forcing_files/
 lakeCAT_downloads/
 NHDplusDownloads/
+NHDplusOutput/
+DOENRELdata/
