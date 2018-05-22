@@ -46,6 +46,7 @@ NHDplus_waterbudgets$Qin=runoff$RunoffWs/(365*1000)*runoff$WsAreaSqKm*1e6 # m3 d
 # could do this a lot better geographically...
 NHDplus_waterbudgets$flag[is.na(NHDplus_waterbudgets$Qin)]=1   # NA for runoff in lakeCAT
 plot(NHDplus_waterbudgets$LONG[is.na(NHDplus_waterbudgets$Qin)],NHDplus_waterbudgets$LAT[is.na(NHDplus_waterbudgets$Qin)],pch=16,cex=0.5)
+library(fields)
 US(add=TRUE)
 wsYield=runoff$RunoffWs/prism$Precip8110Cat
 range(wsYield,na.rm=TRUE)
@@ -92,3 +93,76 @@ fracEvap=NHDplus_waterbudgets$E/(NHDplus_waterbudgets$E+NHDplus_waterbudgets$Qou
 hist(fracEvap,main=NULL,xlab="fraction of water export via evaporation")
 
 plot(fracEvap,log10(NHDplus_waterbudgets$HRT),xlab="fraction of water export via evaporation",ylab="log10(residence time) [days]")
+
+#****** compare to Brooks et al. (2014) isotope-based observations
+# load brooks data from ratesVfates repo
+brooks=read.csv("../NLAobservations/Brooksetal.csv",header=TRUE,stringsAsFactors=FALSE)
+brooks=brooks[brooks$VISIT_NO==1,]
+brooks=brooks[order(brooks$SITE_ID),]
+
+# load nla 2007 site info
+nla2007=read.csv("../NLAobservations/nla2007_sampledlakeinformation_20091113.csv",header=TRUE,stringsAsFactors=FALSE)
+nla2007=nla2007[nla2007$VISIT_NO==1,]
+nla2007=nla2007[order(nla2007$SITE_ID),]
+
+sum(nla2007$SITE_ID==brooks$SITE_ID)
+dim(nla2007)
+dim(brooks)
+
+brooks$COM_ID=nla2007$COM_ID
+
+# try matching with COMIDs
+NHDplus4comp=NHDplus_waterbudgets[NHDplus_waterbudgets$COMID%in%brooks$COM_ID,]
+dim(NHDplus4comp)  # only 1055 here; should be 1157...
+missingBrooksLakes=brooks[!(brooks$COM_ID%in%NHDplus_waterbudgets$COMID),]
+sum(duplicated(brooks$COM_ID))
+brooks$COM_ID[duplicated(brooks$COM_ID)]
+# seems like a few COMIDs are duplicated in brooks, there are also a bunch (~100) that aren't in NHDplus for some reason...
+
+#use minimum distance between lat/long instead...
+deltaLat=abs(NHDplus_waterbudgets$LAT-brooks$LAT_DD[1])
+deltaLon=abs(NHDplus_waterbudgets$LONG-brooks$LON_DD[1])
+dist=sqrt(deltaLat^2+deltaLon^2)
+
+minDist=min(dist)
+NHDplus4compDist=NHDplus_waterbudgets[dist==min(dist),]
+for(i in 2:nrow(brooks)){
+  deltaLat=abs(NHDplus_waterbudgets$LAT-brooks$LAT_DD[i])
+  deltaLon=abs(NHDplus_waterbudgets$LONG-brooks$LON_DD[i])
+  dist=sqrt(deltaLat^2+deltaLon^2)
+  NHDplus4compDist=rbind(NHDplus4compDist,NHDplus_waterbudgets[dist==min(dist),])
+  minDist=c(minDist,min(dist))
+}
+
+range(minDist)
+hist(log10(minDist))  # some of these are pretty far apart...
+sum(brooks$COM_ID==NHDplus4compDist$COMID)  # 1009 out of 1157...
+range(minDist[brooks$COM_ID==NHDplus4compDist$COMID])
+range(minDist[brooks$COM_ID!=NHDplus4compDist$COMID]) # some of these seem right and others don't
+matched=hist(log10(minDist[brooks$COM_ID==NHDplus4compDist$COMID]),breaks=seq(-5,0,0.1))
+notmatched=hist(log10(minDist[brooks$COM_ID!=NHDplus4compDist$COMID]),breaks=seq(-5,0,0.1)) # some of these seem right and others don't
+barplot(rbind(matched$counts,notmatched$counts),beside=TRUE,names.arg=matched$breaks[-1])
+
+# color codes for comparisons
+matchCol=rep('black',nrow(brooks))
+matchCol[brooks$COM_ID!=NHDplus4compDist$COMID]='red'
+
+plot(log10(brooks$RT*365),log10(NHDplus4compDist$HRT),col=matchCol,xlab="Brooks et al. 2014 HRT (days)",ylab="lakeCAT modeled HRT (days)")
+abline(a=0,b=1)
+
+brooksRTcdf=ecdf(log10(brooks$RT*365+1))
+modeledRTcdf=ecdf(log10(NHDplus4compDist$HRT))
+plot(brooksRTcdf)
+plot(modeledRTcdf,add=TRUE,col='red')
+
+
+plot(brooks$E_I,NHDplus4compDist$E/NHDplus4compDist$Qin,col=matchCol,xlab="Brooks et al. 2014 Evap:Inflow",ylab="lakeCAT modeled Evap:Inflow")
+abline(a=0,b=1)
+plot(brooks$E_I,NHDplus4compDist$E/NHDplus4compDist$Qin,col=matchCol,xlab="Brooks et al. 2014 Evap:Inflow",ylab="lakeCAT modeled Evap:Inflow",xlim=c(0,1.5),ylim=c(0,1.5))
+abline(a=0,b=1)
+sum(NHDplus4compDist$E/NHDplus4compDist$Qin>1.5) # 59 out of 1157 not shown on plot because very high
+
+brooksEIcdf=ecdf(brooks$E_I)
+modelEIcdf=ecdf(NHDplus4compDist$E/NHDplus4compDist$Qin)
+plot(brooksEIcdf)
+plot(modelEIcdf,add=TRUE,col='red')
