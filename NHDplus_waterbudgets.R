@@ -155,14 +155,40 @@ modeledRTcdf=ecdf(log10(NHDplus4compDist$HRT))
 plot(brooksRTcdf)
 plot(modeledRTcdf,add=TRUE,col='red')
 
-
-plot(brooks$E_I,NHDplus4compDist$E/NHDplus4compDist$Qin,col=matchCol,xlab="Brooks et al. 2014 Evap:Inflow",ylab="lakeCAT modeled Evap:Inflow")
+# Brooks considered surface inputs, groundwater, and direct precip as "inflow"
+plot(brooks$E_I,NHDplus4compDist$E/(NHDplus4compDist$Qin+NHDplus4compDist$Pin),col=matchCol,xlab="Brooks et al. 2014 Evap:Inflow",ylab="lakeCAT modeled Evap:Inflow")
 abline(a=0,b=1)
-plot(brooks$E_I,NHDplus4compDist$E/NHDplus4compDist$Qin,col=matchCol,xlab="Brooks et al. 2014 Evap:Inflow",ylab="lakeCAT modeled Evap:Inflow",xlim=c(0,1.5),ylim=c(0,1.5))
+plot(brooks$E_I,NHDplus4compDist$E/(NHDplus4compDist$Qin+NHDplus4compDist$Pin),col=matchCol,xlab="Brooks et al. 2014 Evap:Inflow",ylab="lakeCAT modeled Evap:Inflow",xlim=c(0,1.5),ylim=c(0,1.5))
 abline(a=0,b=1)
 sum(NHDplus4compDist$E/NHDplus4compDist$Qin>1.5) # 59 out of 1157 not shown on plot because very high
 
 brooksEIcdf=ecdf(brooks$E_I)
-modelEIcdf=ecdf(NHDplus4compDist$E/NHDplus4compDist$Qin)
+modelEIcdf=ecdf(NHDplus4compDist$E/(NHDplus4compDist$Qin+NHDplus4compDist$Pin))
 plot(brooksEIcdf)
 plot(modelEIcdf,add=TRUE,col='red')
+
+
+# where are "bad" lakes?
+residHRT=brooks$RT*365-NHDplus4compDist$HRT
+residEI=brooks$E_I-(NHDplus4compDist$E/(NHDplus4compDist$Qin+NHDplus4compDist$Pin))
+
+HRTresidCEX=2*log10(abs(residHRT))/max(log10(abs(residHRT)))
+plot(NHDplus4compDist$LONG,NHDplus4compDist$LAT,cex=HRTresidCEX)
+US(add=TRUE)
+
+EIresidCEX=2*abs(residEI)/max(abs(residEI))
+plot(NHDplus4compDist$LONG,NHDplus4compDist$LAT,cex=EIresidCEX)
+US(add=TRUE)
+
+# do residuals of EI and HRT correlate? --> maybe...
+plot(residHRT,residEI)
+plot(log10(abs(residHRT)),residEI)
+
+
+# look at lake connectivity effects; use Qout of upstream lakes...
+# this might reduce Qin to some lakes and help with EI?
+
+
+# look at Brooks evap. estimation methods and pan evap numbers
+# combine into a "ensemble" evap estimate; this might increase evap and help EI
+

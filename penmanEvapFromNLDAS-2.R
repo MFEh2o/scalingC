@@ -149,6 +149,8 @@ meanEvap=-1*apply(store_evap,c(1,2),FUN=mean)  #mm day-1
 filled.contour(1:nrow(meanEvap),1:ncol(meanEvap),meanEvap)
 
 # make spatial dataframe with long, lat, and meanEvap numbers
+library(sp)
+
 long=seq(-124.9375,-67.0625,by=0.125)
 lat=seq(25.0625,52.9375,by=0.125)
 meanEvapDF=data.frame(long=rep(long,length(lat)),lat=rep(lat,each=length(long)),meanEvap=as.numeric(meanEvap))
