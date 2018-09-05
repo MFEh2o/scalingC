@@ -49,3 +49,5 @@ monthlyTMEANlong=data.frame(COMID=rep(evap$COMID,each=12),month=rep(1:12,nrow(ev
 monthlyTMEANwide=reshape(monthlyTMEANlong,idvar="COMID",timevar="month",direction="wide")
 
 write.csv(monthlyTMEANwide,"monthlyTMEANnorms_prism.txt",row.names=FALSE)
+
+# put a copy of this output in /scalingC/NHDplusOutput/
